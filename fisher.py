@@ -179,9 +179,10 @@ class FisherVector:
 
     @staticmethod
     def normalize(fisher_vector):
-        """ As describe in step 3, algorithm 1, page 6 of reference [1] """
-        v = np.sqrt(abs(fisher_vector)) * np.sign(fisher_vector)
-        return v / np.sqrt(np.dot(v, v))
+        """ Power normalization based on equation 30, page 5, last para; and
+        is used in step 3, algorithm 1, page 6 of reference [1] """
+        v = np.sign(fisher_vector) * np.sqrt(abs(fisher_vector))    # Power normalization
+        return v / np.sqrt(np.dot(v, v))    # L2 Normalization
 
 
 def train(features):
