@@ -71,7 +71,7 @@ class Descriptors:
         """ Refer section 2.2 of reference [1] """
         img = cv2.imread(filename, 0)
         # img = cv2.resize(img, (256, 256))
-        # _ , descriptors = cv2.SIFT().detectAndCompute(img, None)
+        # _ , descriptors = cv2.xfeatures2d.SIFT_create().detectAndCompute(img, None)
         _, descriptors = cv2.ORB_create().detectAndCompute(img, None)
         print(filename, descriptors)
         return descriptors
@@ -105,8 +105,9 @@ class FisherVector:
         means = FisherVector._fisher_vector_means(s0, s1, s2, means, diagonal_covariances, w, T)
         sigma = FisherVector._fisher_vector_sigma(s0, s1, s2, means, diagonal_covariances, w, T)
         # FIXME: Weights are one dimensional here.
-        fv = np.concatenate([np.concatenate(weights), np.concatenate(means), np.concatenate(sigma)])
-        fv = FisherVector.normalize(fv)
+        # fv = np.concatenate([np.concatenate(weights), np.concatenate(means), np.concatenate(sigma)])
+        fv = np.concatenate([weights, np.concatenate(means), np.concatenate(sigma)])
+        fv = FisherVector.normalize(fv)     # TODO: Normalizing before removing zeros
         return fv
 
 
@@ -158,8 +159,9 @@ class FisherVector:
 
 
 def train(features):
-    X = np.concatenate(features.values())
-    Y = np.concatenate([np.float32([i] * len(v)) for i, v in zip(range(0, len(features)), features.values())])
+    feature_values = list(features.values())
+    X = np.concatenate(feature_values)
+    Y = np.concatenate([np.float32([i] * len(v)) for i, v in zip(range(0, len(features)), feature_values)])
 
     clf = svm.SVC()
     clf.fit(X, Y)
@@ -168,8 +170,9 @@ def train(features):
 
 def success_rate(classifier, features):
     print("Applying the classifier...")
-    X = np.concatenate(np.array(features.values()))
-    Y = np.concatenate([np.float32([i] * len(v)) for i, v in zip(range(0, len(features)), features.values())])
+    feature_values = list(features.values())
+    X = np.concatenate(feature_values)
+    Y = np.concatenate([np.float32([i] * len(v)) for i, v in zip(range(0, len(feature_values)), feature_values)])
     res = float(sum([a == b for a, b in zip(classifier.predict(X), Y)])) / len(Y)
     return res
 
