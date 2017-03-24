@@ -101,10 +101,11 @@ class FisherVector:
         T = samples.shape[0]
         diagonal_covariances = np.float32([np.diagonal(covariances[k]) for k in range(0, covariances.shape[0])])
         """ Refer page 4, first column of reference [1] """
-        a = FisherVector._fisher_vector_weights(s0, s1, s2, means, diagonal_covariances, w, T)
-        b = FisherVector._fisher_vector_means(s0, s1, s2, means, diagonal_covariances, w, T)
-        c = FisherVector._fisher_vector_sigma(s0, s1, s2, means, diagonal_covariances, w, T)
-        fv = np.concatenate([np.concatenate(a), np.concatenate(b), np.concatenate(c)])
+        weights = FisherVector._fisher_vector_weights(s0, s1, s2, means, diagonal_covariances, w, T)
+        means = FisherVector._fisher_vector_means(s0, s1, s2, means, diagonal_covariances, w, T)
+        sigma = FisherVector._fisher_vector_sigma(s0, s1, s2, means, diagonal_covariances, w, T)
+        # FIXME: Weights are one dimensional here.
+        fv = np.concatenate([np.concatenate(weights), np.concatenate(means), np.concatenate(sigma)])
         fv = FisherVector.normalize(fv)
         return fv
 
