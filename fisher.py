@@ -3,13 +3,11 @@ Fisher Vector implementation using cv2 v3.2.0+ and python3.
 
 Please refer to the paper:
 [1]: Image Classification with the Fisher Vector: https://hal.inria.fr/file/index/docid/830491/filename/journal.pdf
+[2]: http://www.vlfeat.org/api/gmm-fundamentals.html
 """
 
 import argparse
 import glob
-import math
-import sys
-import time
 
 import cv2  # v3.2.0
 import numpy as np
@@ -79,10 +77,11 @@ def normalize(fisher_vector):
 def fisher_vector(samples, means, covs, w):
     s0, s1, s2 = likelihood_statistics(samples, means, covs, w)
     T = samples.shape[0]
-    covs = np.float32([np.diagonal(covs[k]) for k in range(0, covs.shape[0])])
-    a = fisher_vector_weights(s0, s1, s2, means, covs, w, T)
-    b = fisher_vector_means(s0, s1, s2, means, covs, w, T)
-    c = fisher_vector_sigma(s0, s1, s2, means, covs, w, T)
+    diagonal_covs = np.float32([np.diagonal(covs[k]) for k in range(0, covs.shape[0])])
+    """ Refer page 4, first column of reference [1] """
+    a = fisher_vector_weights(s0, s1, s2, means, diagonal_covs, w, T)
+    b = fisher_vector_means(s0, s1, s2, means, diagonal_covs, w, T)
+    c = fisher_vector_sigma(s0, s1, s2, means, diagonal_covs, w, T)
     fv = np.concatenate([np.concatenate(a), np.concatenate(b), np.concatenate(c)])
     fv = normalize(fv)
     return fv
@@ -95,12 +94,12 @@ def load_gmm(folder=""):
 
 def generate_gmm(input_folder, N):
     """
-    Implementation of Gausian Mixture Model using Expectation Maximisation
+    Implementation of Gaussian Mixture Model using Expectation Maximisation
     """
     words = np.concatenate([folder_descriptors(folder) for folder in glob.glob(input_folder + '/*')])
     print("Training GMM of size", N)
     means, covs, weights = dictionary(words, N)
-    #Throw away gaussians with weights that are too small:
+    # Throw away gaussians with weights that are too small:
     th = 1.0 / N
     means = np.float32([m for k, m in zip(range(0, len(weights)), means) if weights[k] > th])
     covs = np.float32([m for k, m in zip(range(0, len(weights)), covs) if weights[k] > th])
@@ -113,12 +112,12 @@ def generate_gmm(input_folder, N):
 
 
 def dictionary(descriptors, N):
-    """ See Reference: http://www.vlfeat.org/api/gmm-fundamentals.html """
+    """ See reference [2] """
     em = cv2.ml.EM_create()
     em.setClustersNumber(N)
     em.trainEM(descriptors)
     return np.float32(em.getMeans()), \
-     np.float32(em.getCovs()), np.float32(em.getWeights())[0]
+           np.float32(em.getCovs()), np.float32(em.getWeights())[0]
 
 
 def get_fisher_vectors_from_folder(folder, gmm):
@@ -164,7 +163,7 @@ if __name__ == '__main__':
 
     gmm = load_gmm(working_folder) if args.loadgmm else generate_gmm(working_folder, args.number)
     fisher_features = fisher_features(working_folder, gmm)
-    #TBD, split the features into training and validation
+    # TBD, split the features into training and validation
     classifier = train(gmm, fisher_features)
     rate = success_rate(classifier, fisher_features)
     print("Success rate is", rate)
