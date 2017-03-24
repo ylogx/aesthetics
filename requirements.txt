@@ -1,3 +1,9 @@
 click
 requests
 pandas
+
+# fisher
+opencv-python
+numpy
+scipy
+sklearn
