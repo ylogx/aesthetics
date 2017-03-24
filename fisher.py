@@ -1,7 +1,7 @@
 """
 Fisher Vector implementation using cv2 v3.2.0+ and python3.
 
-Please refer to the paper:
+References used below:
 [1]: Image Classification with the Fisher Vector: https://hal.inria.fr/file/index/docid/830491/filename/journal.pdf
 [2]: http://www.vlfeat.org/api/gmm-fundamentals.html
 """
@@ -115,7 +115,9 @@ class FisherVector:
         # FIXME: Weights are one dimensional here.
         # fv = np.concatenate([np.concatenate(weights), np.concatenate(means), np.concatenate(sigma)])
         fv = np.concatenate([weights, np.concatenate(means), np.concatenate(sigma)])
+
         fv = FisherVector.normalize(fv)     # TODO: Normalizing before removing zeros
+
         return fv
 
 
@@ -130,7 +132,7 @@ class FisherVector:
             x_moment = np.power(np.float32(x), moment) if moment > 0 else np.float32([1])
             return x_moment * posterior_probability
 
-        s0, s1, s2 = {}, {}, {}
+        statistics_0_order, statistics_1_order, statistics_2_order = {}, {}, {}
         samples = zip(range(0, len(samples)), samples)
 
         g = [multivariate_normal(mean=means[k], cov=covariances[k]) for k in range(0, len(weights))]
@@ -139,14 +141,14 @@ class FisherVector:
         """ u(x) for equation 15, page 4 in reference 1 """
 
         for k in range(0, len(weights)):
-            s0[k], s1[k], s2[k] = 0, 0, 0
+            statistics_0_order[k], statistics_1_order[k], statistics_2_order[k] = 0, 0, 0
             for index, x in samples:
                 posterior_probability = FisherVector.posterior_probability(gaussians[index], weights)
-                s0[k] = s0[k] + likelihood_moment(x, posterior_probability[k], 0)
-                s1[k] = s1[k] + likelihood_moment(x, posterior_probability[k], 1)
-                s2[k] = s2[k] + likelihood_moment(x, posterior_probability[k], 2)
+                statistics_0_order[k] = statistics_0_order[k] + likelihood_moment(x, posterior_probability[k], 0)
+                statistics_1_order[k] = statistics_1_order[k] + likelihood_moment(x, posterior_probability[k], 1)
+                statistics_2_order[k] = statistics_2_order[k] + likelihood_moment(x, posterior_probability[k], 2)
 
-        return s0, s1, s2
+        return statistics_0_order, statistics_1_order, statistics_2_order
 
     @staticmethod
     def posterior_probability(u_gaussian, weights):
@@ -156,31 +158,34 @@ class FisherVector:
         return probabilities
 
     @staticmethod
-    def _fisher_vector_weights(s0, s1, s2, means, covariances, w, T):
+    def _fisher_vector_weights(statistics_0_order, s1, s2, means, covariances, w, T):
         """ Implementation of equation 31, page 6 from reference [1] """
-        return np.float32([((s0[k] - T * w[k]) / np.sqrt(w[k])) for k in range(0, len(w))])
+        return np.float32([((statistics_0_order[k] - T * w[k]) / np.sqrt(w[k])) for k in range(0, len(w))])
 
 
     @staticmethod
-    def _fisher_vector_means(s0, s1, s2, means, sigma, w, T):
+    def _fisher_vector_means(s0, statistics_1_order, s2, means, sigma, w, T):
         """ Implementation of equation 32, page 6 from reference [1] """
-        return np.float32([(s1[k] - means[k] * s0[k]) / (np.sqrt(w[k] * sigma[k])) for k in range(0, len(w))])
+        return np.float32([(statistics_1_order[k] - means[k] * s0[k]) /
+                           (np.sqrt(w[k] * sigma[k])) for k in range(0, len(w))])
 
 
     @staticmethod
-    def _fisher_vector_sigma(s0, s1, s2, means, sigma, w, T):
+    def _fisher_vector_sigma(s0, s1, statistics_2_order, means, sigma, w, T):
         """ Implementation of equation 33, page 6 from reference [1] """
-        return np.float32([(s2[k] - 2 * means[k] * s1[k] + (means[k] * means[k] - sigma[k]) * s0[k]) /
+        return np.float32([(statistics_2_order[k] - 2 * means[k] * s1[k] + (means[k] * means[k] - sigma[k]) * s0[k]) /
                            (np.sqrt(2 * w[k]) * sigma[k]) for k in range(0, len(w))])
 
 
     @staticmethod
     def normalize(fisher_vector):
+        """ As describe in step 3, algorithm 1, page 6 of reference [1] """
         v = np.sqrt(abs(fisher_vector)) * np.sign(fisher_vector)
         return v / np.sqrt(np.dot(v, v))
 
 
 def train(features):
+    # import ipdb as pdb; pdb.set_trace()
     feature_values = list(features.values())
     X = np.concatenate(feature_values)
     Y = np.concatenate([np.float32([i] * len(v)) for i, v in zip(range(0, len(features)), feature_values)])
