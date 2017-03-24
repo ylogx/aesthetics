@@ -1,21 +1,24 @@
-import sys, glob, argparse
-import numpy as np
+"""
+Fisher Vector implementation using cv2 v3.2.0+ and python3.
+
+Please refer to the paper:
+[1]: Image Classification with the Fisher Vector: https://hal.inria.fr/file/index/docid/830491/filename/journal.pdf
+"""
+
+import argparse
+import glob
 import math
-import cv2  # v3.2.0
-from scipy.stats import multivariate_normal
+import sys
 import time
+
+import cv2  # v3.2.0
+import numpy as np
+from scipy.stats import multivariate_normal
 from sklearn import svm
 
 
-def dictionary(descriptors, N):
-    em = cv2.ml.EM_create()
-    em.setClustersNumber(N)
-    em.trainEM(descriptors)
-    return np.float32(em.getMeans()), \
-     np.float32(em.getCovs()), np.float32(em.getWeights())[0]
-
-
 def image_descriptors(file):
+    """ Refer section 2.2 of reference [1] """
     img = cv2.imread(file, 0)
     # img = cv2.resize(img, (256, 256))
     # _ , descriptors = cv2.SIFT().detectAndCompute(img, None)
@@ -85,7 +88,15 @@ def fisher_vector(samples, means, covs, w):
     return fv
 
 
+def load_gmm(folder=""):
+    files = ["means.gmm.npy", "covs.gmm.npy", "weights.gmm.npy"]
+    return map(lambda file: np.load(file), map(lambda s: folder + "/", files))
+
+
 def generate_gmm(input_folder, N):
+    """
+    Implementation of Gausian Mixture Model using Expectation Maximisation
+    """
     words = np.concatenate([folder_descriptors(folder) for folder in glob.glob(input_folder + '/*')])
     print("Training GMM of size", N)
     means, covs, weights = dictionary(words, N)
@@ -99,6 +110,15 @@ def generate_gmm(input_folder, N):
     np.save("covs.gmm", covs)
     np.save("weights.gmm", weights)
     return means, covs, weights
+
+
+def dictionary(descriptors, N):
+    """ See Reference: http://www.vlfeat.org/api/gmm-fundamentals.html """
+    em = cv2.ml.EM_create()
+    em.setClustersNumber(N)
+    em.trainEM(descriptors)
+    return np.float32(em.getMeans()), \
+     np.float32(em.getCovs()), np.float32(em.getWeights())[0]
 
 
 def get_fisher_vectors_from_folder(folder, gmm):
@@ -127,11 +147,6 @@ def success_rate(classifier, features):
     Y = np.concatenate([np.float32([i] * len(v)) for i, v in zip(range(0, len(features)), features.values())])
     res = float(sum([a == b for a, b in zip(classifier.predict(X), Y)])) / len(Y)
     return res
-
-
-def load_gmm(folder=""):
-    files = ["means.gmm.npy", "covs.gmm.npy", "weights.gmm.npy"]
-    return map(lambda file: load(file), map(lambda s: folder + "/", files))
 
 
 def get_args():
