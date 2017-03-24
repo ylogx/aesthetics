@@ -8,6 +8,7 @@ Please refer to the paper:
 
 import glob
 
+import click
 import cv2  # v3.2.0
 import numpy as np
 from scipy.stats import multivariate_normal
@@ -15,9 +16,10 @@ from sklearn import svm
 
 
 class Gmm:
-    """ Gaussian Mixture Model """
-    def __init__(self):
+    """ K-component Gaussian Mixture Model """
+    def __init__(self, K):
         """ As described in section 2.2, para 3 of reference [1] """
+        self.K = K
         self.means = None
         """ Mean Vector """
         self.covariances = None
@@ -25,26 +27,27 @@ class Gmm:
         self.weights = None
         """ Mixture Weights """
 
-    def generate(self, input_folder, N):
+    def generate(self, input_folder):
         descriptor = Descriptors()
         words = np.concatenate([descriptor.folder(folder) for folder in glob.glob(input_folder + '/*')])
-        print("Training GMM of size", N)
-        self.means, self.covariances, self.weights = self.dictionary(words, N)
+        print("Training GMM of size", self.K)
+        self.means, self.covariances, self.weights = self.dictionary(words, self.K)
         # Throw away gaussians with weights that are too small:
-        self.means = self.remove_too_small(self.means, N, self.weights)
-        self.covariances = self.remove_too_small(self.covariances, N, self.weights)
-        self.weights = self.remove_too_small(self.weights, N, self.weights)
+        self.means = self.remove_too_small(self.means, self.weights)
+        self.covariances = self.remove_too_small(self.covariances, self.weights)
+        self.weights = self.remove_too_small(self.weights, self.weights)
 
         self.save()
         return self.means, self.covariances, self.weights
 
-    def remove_too_small(self, values, N, weights):
-        threshold = 1.0 / N
+    def remove_too_small(self, values, weights):
+        threshold = 1.0 / self.K
         return np.float32([m for k, m in zip(range(0, len(weights)), values) if weights[k] > threshold])
 
     def load(self, folder=''):
+        import os
         files = ['means.gmm.npy', 'covariances.gmm.npy', 'weights.gmm.npy']
-        self.means, self.covariances, self.weights = map(lambda file: np.load(file), map(lambda s: folder + '/', files))
+        self.means, self.covariances, self.weights = map(lambda file: np.load(file), map(lambda s: os.path.join(folder, s), files))
 
     def save(self):
         np.save("means.gmm", self.means)
@@ -52,10 +55,10 @@ class Gmm:
         np.save("weights.gmm", self.weights)
 
     @staticmethod
-    def dictionary(descriptors, N):
+    def dictionary(descriptors, K):
         """ See reference [2] """
         em = cv2.ml.EM_create()
-        em.setClustersNumber(N)
+        em.setClustersNumber(K)
         em.trainEM(descriptors)
         return np.float32(em.getMeans()), np.float32(em.getCovs()), np.float32(em.getWeights())[0]
 
@@ -96,6 +99,11 @@ class FisherVector:
 
     @staticmethod
     def _fisher_vector(samples, gmm):
+        """
+        :param samples: X
+        :param gmm: Gmm
+        :return: np.array fisher vector
+        """
         means, covariances, w = gmm.means, gmm.covariances, gmm.weights
         s0, s1, s2 = FisherVector._likelihood_statistics(samples, means, covariances, w)
         T = samples.shape[0]
@@ -113,41 +121,55 @@ class FisherVector:
 
     @staticmethod
     def _likelihood_statistics(samples, means, covariances, weights):
-        def likelihood_moment(x, ytk, moment):
+        """
+        :param samples: X
+        :return: 0th order, 1st order, 2nd order statistics 
+                 as described by equation 20, 21, 22 in reference [1]
+        """
+        def likelihood_moment(x, posterior_probability, moment):
             x_moment = np.power(np.float32(x), moment) if moment > 0 else np.float32([1])
-            return x_moment * ytk
+            return x_moment * posterior_probability
 
-        gaussians, s0, s1, s2 = {}, {}, {}, {}
+        s0, s1, s2 = {}, {}, {}
         samples = zip(range(0, len(samples)), samples)
 
         g = [multivariate_normal(mean=means[k], cov=covariances[k]) for k in range(0, len(weights))]
-        for index, x in samples:
-            gaussians[index] = np.array([g_k.pdf(x) for g_k in g])
+
+        gaussians = {index: np.array([g_k.pdf(x) for g_k in g]) for index, x in samples}
+        """ u(x) for equation 15, page 4 in reference 1 """
 
         for k in range(0, len(weights)):
             s0[k], s1[k], s2[k] = 0, 0, 0
             for index, x in samples:
-                probabilities = np.multiply(gaussians[index], weights)
-                probabilities = probabilities / np.sum(probabilities)
-                s0[k] = s0[k] + likelihood_moment(x, probabilities[k], 0)
-                s1[k] = s1[k] + likelihood_moment(x, probabilities[k], 1)
-                s2[k] = s2[k] + likelihood_moment(x, probabilities[k], 2)
+                posterior_probability = FisherVector.posterior_probability(gaussians[index], weights)
+                s0[k] = s0[k] + likelihood_moment(x, posterior_probability[k], 0)
+                s1[k] = s1[k] + likelihood_moment(x, posterior_probability[k], 1)
+                s2[k] = s2[k] + likelihood_moment(x, posterior_probability[k], 2)
 
         return s0, s1, s2
 
+    @staticmethod
+    def posterior_probability(u_gaussian, weights):
+        """ Implementation of equation 15, page 4 from reference [1] """
+        probabilities = np.multiply(u_gaussian, weights)
+        probabilities = probabilities / np.sum(probabilities)
+        return probabilities
 
     @staticmethod
     def _fisher_vector_weights(s0, s1, s2, means, covariances, w, T):
+        """ Implementation of equation 31, page 6 from reference [1] """
         return np.float32([((s0[k] - T * w[k]) / np.sqrt(w[k])) for k in range(0, len(w))])
 
 
     @staticmethod
     def _fisher_vector_means(s0, s1, s2, means, sigma, w, T):
+        """ Implementation of equation 32, page 6 from reference [1] """
         return np.float32([(s1[k] - means[k] * s0[k]) / (np.sqrt(w[k] * sigma[k])) for k in range(0, len(w))])
 
 
     @staticmethod
     def _fisher_vector_sigma(s0, s1, s2, means, sigma, w, T):
+        """ Implementation of equation 33, page 6 from reference [1] """
         return np.float32([(s2[k] - 2 * means[k] * s1[k] + (means[k] * means[k] - sigma[k]) * s0[k]) /
                            (np.sqrt(2 * w[k]) * sigma[k]) for k in range(0, len(w))])
 
@@ -177,27 +199,20 @@ def success_rate(classifier, features):
     return res
 
 
-def main():
-    def get_args():
-        import argparse
-        parser = argparse.ArgumentParser()
-        parser.add_argument('-d', "--dir", help="Directory with images", default='.')
-        parser.add_argument("-g", "--loadgmm", help="Load Gmm dictionary", action='store_true', default=False)
-        parser.add_argument('-n', "--number", help="Number of words in dictionary", default=5, type=int)
-        args = parser.parse_args()
-        return args
-
-    args = get_args()
-    working_folder = args.dir
-
-    gmm = Gmm()
-    if args.loadgmm:
-        gmm.load(folder=working_folder)
+@click.command()
+@click.option('-d', '--dir', default='.', help='Directory of images (default: ./)')
+@click.option('-g', '--loadgmm', default=False, is_flag=True, help='Load gmm dictionary from pickles')
+@click.option('-n', '--number', default=5, help='Number of words in gmm dictionary')
+def main(dir, loadgmm, number):
+    print(dir, loadgmm, number)
+    gmm = Gmm(K=number)
+    if loadgmm:
+        gmm.load()
     else:
-        gmm.generate(input_folder=working_folder, N=args.number)
+        gmm.generate(input_folder=dir)
 
     fisher_vector = FisherVector(gmm)
-    features = fisher_vector.features(working_folder)
+    features = fisher_vector.features(dir)
     # TBD, split the features into training and validation
     classifier = train(features)
     rate = success_rate(classifier, features)
