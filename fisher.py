@@ -14,78 +14,6 @@ from scipy.stats import multivariate_normal
 from sklearn import svm
 
 
-def image_descriptors(file):
-    """ Refer section 2.2 of reference [1] """
-    img = cv2.imread(file, 0)
-    # img = cv2.resize(img, (256, 256))
-    # _ , descriptors = cv2.SIFT().detectAndCompute(img, None)
-    _, descriptors = cv2.ORB_create().detectAndCompute(img, None)
-    print(file, descriptors)
-    return descriptors
-
-
-def folder_descriptors(folder):
-    files = glob.glob(folder + "/*.jpg")
-    print("Calculating descriptos. Number of images is", len(files))
-    return np.concatenate([image_descriptors(file) for file in files])
-
-
-def likelihood_moment(x, ytk, moment):
-    x_moment = np.power(np.float32(x), moment) if moment > 0 else np.float32([1])
-    return x_moment * ytk
-
-
-def likelihood_statistics(samples, means, covariances, weights):
-    gaussians, s0, s1, s2 = {}, {}, {}, {}
-    samples = zip(range(0, len(samples)), samples)
-
-    g = [multivariate_normal(mean=means[k], cov=covariances[k]) for k in range(0, len(weights))]
-    for index, x in samples:
-        gaussians[index] = np.array([g_k.pdf(x) for g_k in g])
-
-    for k in range(0, len(weights)):
-        s0[k], s1[k], s2[k] = 0, 0, 0
-        for index, x in samples:
-            probabilities = np.multiply(gaussians[index], weights)
-            probabilities = probabilities / np.sum(probabilities)
-            s0[k] = s0[k] + likelihood_moment(x, probabilities[k], 0)
-            s1[k] = s1[k] + likelihood_moment(x, probabilities[k], 1)
-            s2[k] = s2[k] + likelihood_moment(x, probabilities[k], 2)
-
-    return s0, s1, s2
-
-
-def fisher_vector_weights(s0, s1, s2, means, covariances, w, T):
-    return np.float32([((s0[k] - T * w[k]) / np.sqrt(w[k])) for k in range(0, len(w))])
-
-
-def fisher_vector_means(s0, s1, s2, means, sigma, w, T):
-    return np.float32([(s1[k] - means[k] * s0[k]) / (np.sqrt(w[k] * sigma[k])) for k in range(0, len(w))])
-
-
-def fisher_vector_sigma(s0, s1, s2, means, sigma, w, T):
-    return np.float32([(s2[k] - 2 * means[k] * s1[k] + (means[k] * means[k] - sigma[k]) * s0[k]) /
-                       (np.sqrt(2 * w[k]) * sigma[k]) for k in range(0, len(w))])
-
-
-def normalize(fisher_vector):
-    v = np.sqrt(abs(fisher_vector)) * np.sign(fisher_vector)
-    return v / np.sqrt(np.dot(v, v))
-
-
-def fisher_vector(samples, means, covariances, w):
-    s0, s1, s2 = likelihood_statistics(samples, means, covariances, w)
-    T = samples.shape[0]
-    diagonal_covariances = np.float32([np.diagonal(covariances[k]) for k in range(0, covariances.shape[0])])
-    """ Refer page 4, first column of reference [1] """
-    a = fisher_vector_weights(s0, s1, s2, means, diagonal_covariances, w, T)
-    b = fisher_vector_means(s0, s1, s2, means, diagonal_covariances, w, T)
-    c = fisher_vector_sigma(s0, s1, s2, means, diagonal_covariances, w, T)
-    fv = np.concatenate([np.concatenate(a), np.concatenate(b), np.concatenate(c)])
-    fv = normalize(fv)
-    return fv
-
-
 def load_gmm(folder=""):
     files = ["means.gmm.npy", "covariances.gmm.npy", "weights.gmm.npy"]
     return map(lambda file: np.load(file), map(lambda s: folder + "/", files))
@@ -110,6 +38,22 @@ def generate_gmm(input_folder, N):
     return means, covariances, weights
 
 
+def folder_descriptors(folder):
+    files = glob.glob(folder + "/*.jpg")
+    print("Calculating descriptors. Number of images is", len(files))
+    return np.concatenate([image_descriptors(file) for file in files])
+
+
+def image_descriptors(file):
+    """ Refer section 2.2 of reference [1] """
+    img = cv2.imread(file, 0)
+    # img = cv2.resize(img, (256, 256))
+    # _ , descriptors = cv2.SIFT().detectAndCompute(img, None)
+    _, descriptors = cv2.ORB_create().detectAndCompute(img, None)
+    print(file, descriptors)
+    return descriptors
+
+
 def dictionary(descriptors, N):
     """ See reference [2] """
     em = cv2.ml.EM_create()
@@ -119,15 +63,72 @@ def dictionary(descriptors, N):
            np.float32(em.getCovs()), np.float32(em.getWeights())[0]
 
 
-def get_fisher_vectors_from_folder(folder, gmm):
-    files = glob.glob(folder + "/*.jpg")
-    return np.float32([fisher_vector(image_descriptors(file), *gmm) for file in files])
-
+# Fisher Vector #
 
 def fisher_features(folder, gmm):
     folders = glob.glob(folder + "/*")
     features = {f: get_fisher_vectors_from_folder(f, gmm) for f in folders}
     return features
+
+
+def get_fisher_vectors_from_folder(folder, gmm):
+    files = glob.glob(folder + "/*.jpg")
+    return np.float32([fisher_vector(image_descriptors(file), *gmm) for file in files])
+
+
+def fisher_vector(samples, means, covariances, w):
+    s0, s1, s2 = likelihood_statistics(samples, means, covariances, w)
+    T = samples.shape[0]
+    diagonal_covariances = np.float32([np.diagonal(covariances[k]) for k in range(0, covariances.shape[0])])
+    """ Refer page 4, first column of reference [1] """
+    a = _fisher_vector_weights(s0, s1, s2, means, diagonal_covariances, w, T)
+    b = _fisher_vector_means(s0, s1, s2, means, diagonal_covariances, w, T)
+    c = _fisher_vector_sigma(s0, s1, s2, means, diagonal_covariances, w, T)
+    fv = np.concatenate([np.concatenate(a), np.concatenate(b), np.concatenate(c)])
+    fv = normalize(fv)
+    return fv
+
+
+def likelihood_statistics(samples, means, covariances, weights):
+    def likelihood_moment(x, ytk, moment):
+        x_moment = np.power(np.float32(x), moment) if moment > 0 else np.float32([1])
+        return x_moment * ytk
+
+    gaussians, s0, s1, s2 = {}, {}, {}, {}
+    samples = zip(range(0, len(samples)), samples)
+
+    g = [multivariate_normal(mean=means[k], cov=covariances[k]) for k in range(0, len(weights))]
+    for index, x in samples:
+        gaussians[index] = np.array([g_k.pdf(x) for g_k in g])
+
+    for k in range(0, len(weights)):
+        s0[k], s1[k], s2[k] = 0, 0, 0
+        for index, x in samples:
+            probabilities = np.multiply(gaussians[index], weights)
+            probabilities = probabilities / np.sum(probabilities)
+            s0[k] = s0[k] + likelihood_moment(x, probabilities[k], 0)
+            s1[k] = s1[k] + likelihood_moment(x, probabilities[k], 1)
+            s2[k] = s2[k] + likelihood_moment(x, probabilities[k], 2)
+
+    return s0, s1, s2
+
+
+def _fisher_vector_weights(s0, s1, s2, means, covariances, w, T):
+    return np.float32([((s0[k] - T * w[k]) / np.sqrt(w[k])) for k in range(0, len(w))])
+
+
+def _fisher_vector_means(s0, s1, s2, means, sigma, w, T):
+    return np.float32([(s1[k] - means[k] * s0[k]) / (np.sqrt(w[k] * sigma[k])) for k in range(0, len(w))])
+
+
+def _fisher_vector_sigma(s0, s1, s2, means, sigma, w, T):
+    return np.float32([(s2[k] - 2 * means[k] * s1[k] + (means[k] * means[k] - sigma[k]) * s0[k]) /
+                       (np.sqrt(2 * w[k]) * sigma[k]) for k in range(0, len(w))])
+
+
+def normalize(fisher_vector):
+    v = np.sqrt(abs(fisher_vector)) * np.sign(fisher_vector)
+    return v / np.sqrt(np.dot(v, v))
 
 
 def train(features):
