@@ -6,7 +6,6 @@ Please refer to the paper:
 [2]: http://www.vlfeat.org/api/gmm-fundamentals.html
 """
 
-import argparse
 import glob
 
 import cv2  # v3.2.0
@@ -36,11 +35,11 @@ def likelihood_moment(x, ytk, moment):
     return x_moment * ytk
 
 
-def likelihood_statistics(samples, means, covs, weights):
+def likelihood_statistics(samples, means, covariances, weights):
     gaussians, s0, s1, s2 = {}, {}, {}, {}
     samples = zip(range(0, len(samples)), samples)
 
-    g = [multivariate_normal(mean=means[k], cov=covs[k]) for k in range(0, len(weights))]
+    g = [multivariate_normal(mean=means[k], cov=covariances[k]) for k in range(0, len(weights))]
     for index, x in samples:
         gaussians[index] = np.array([g_k.pdf(x) for g_k in g])
 
@@ -56,7 +55,7 @@ def likelihood_statistics(samples, means, covs, weights):
     return s0, s1, s2
 
 
-def fisher_vector_weights(s0, s1, s2, means, covs, w, T):
+def fisher_vector_weights(s0, s1, s2, means, covariances, w, T):
     return np.float32([((s0[k] - T * w[k]) / np.sqrt(w[k])) for k in range(0, len(w))])
 
 
@@ -74,21 +73,21 @@ def normalize(fisher_vector):
     return v / np.sqrt(np.dot(v, v))
 
 
-def fisher_vector(samples, means, covs, w):
-    s0, s1, s2 = likelihood_statistics(samples, means, covs, w)
+def fisher_vector(samples, means, covariances, w):
+    s0, s1, s2 = likelihood_statistics(samples, means, covariances, w)
     T = samples.shape[0]
-    diagonal_covs = np.float32([np.diagonal(covs[k]) for k in range(0, covs.shape[0])])
+    diagonal_covariances = np.float32([np.diagonal(covariances[k]) for k in range(0, covariances.shape[0])])
     """ Refer page 4, first column of reference [1] """
-    a = fisher_vector_weights(s0, s1, s2, means, diagonal_covs, w, T)
-    b = fisher_vector_means(s0, s1, s2, means, diagonal_covs, w, T)
-    c = fisher_vector_sigma(s0, s1, s2, means, diagonal_covs, w, T)
+    a = fisher_vector_weights(s0, s1, s2, means, diagonal_covariances, w, T)
+    b = fisher_vector_means(s0, s1, s2, means, diagonal_covariances, w, T)
+    c = fisher_vector_sigma(s0, s1, s2, means, diagonal_covariances, w, T)
     fv = np.concatenate([np.concatenate(a), np.concatenate(b), np.concatenate(c)])
     fv = normalize(fv)
     return fv
 
 
 def load_gmm(folder=""):
-    files = ["means.gmm.npy", "covs.gmm.npy", "weights.gmm.npy"]
+    files = ["means.gmm.npy", "covariances.gmm.npy", "weights.gmm.npy"]
     return map(lambda file: np.load(file), map(lambda s: folder + "/", files))
 
 
@@ -98,17 +97,17 @@ def generate_gmm(input_folder, N):
     """
     words = np.concatenate([folder_descriptors(folder) for folder in glob.glob(input_folder + '/*')])
     print("Training GMM of size", N)
-    means, covs, weights = dictionary(words, N)
+    means, covariances, weights = dictionary(words, N)
     # Throw away gaussians with weights that are too small:
     th = 1.0 / N
     means = np.float32([m for k, m in zip(range(0, len(weights)), means) if weights[k] > th])
-    covs = np.float32([m for k, m in zip(range(0, len(weights)), covs) if weights[k] > th])
+    covariances = np.float32([m for k, m in zip(range(0, len(weights)), covariances) if weights[k] > th])
     weights = np.float32([m for k, m in zip(range(0, len(weights)), weights) if weights[k] > th])
 
     np.save("means.gmm", means)
-    np.save("covs.gmm", covs)
+    np.save("covariances.gmm", covariances)
     np.save("weights.gmm", weights)
-    return means, covs, weights
+    return means, covariances, weights
 
 
 def dictionary(descriptors, N):
@@ -131,7 +130,7 @@ def fisher_features(folder, gmm):
     return features
 
 
-def train(gmm, features):
+def train(features):
     X = np.concatenate(features.values())
     Y = np.concatenate([np.float32([i] * len(v)) for i, v in zip(range(0, len(features)), features.values())])
 
@@ -148,22 +147,29 @@ def success_rate(classifier, features):
     return res
 
 
-def get_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-d', "--dir", help="Directory with images", default='.')
-    parser.add_argument("-g", "--loadgmm", help="Load Gmm dictionary", action='store_true', default=False)
-    parser.add_argument('-n', "--number", help="Number of words in dictionary", default=5, type=int)
-    args = parser.parse_args()
-    return args
+def main():
+    def get_args():
+        import argparse
+        parser = argparse.ArgumentParser()
+        parser.add_argument('-d', "--dir", help="Directory with images", default='.')
+        parser.add_argument("-g", "--loadgmm", help="Load Gmm dictionary", action='store_true', default=False)
+        parser.add_argument('-n', "--number", help="Number of words in dictionary", default=5, type=int)
+        args = parser.parse_args()
+        return args
 
-
-if __name__ == '__main__':
     args = get_args()
     working_folder = args.dir
 
     gmm = load_gmm(working_folder) if args.loadgmm else generate_gmm(working_folder, args.number)
-    fisher_features = fisher_features(working_folder, gmm)
+    ffeatures = fisher_features(working_folder, gmm)
     # TBD, split the features into training and validation
-    classifier = train(gmm, fisher_features)
-    rate = success_rate(classifier, fisher_features)
+    classifier = train(ffeatures)
+    rate = success_rate(classifier, ffeatures)
     print("Success rate is", rate)
+    return 0
+
+
+if __name__ == '__main__':
+    import sys
+
+    sys.exit(main())
