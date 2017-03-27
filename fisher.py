@@ -27,9 +27,9 @@ class Gmm:
         self.weights = None
         """ Mixture Weights """
 
-    def generate(self, input_folder):
+    def generate(self, input_folder, limit):
         descriptor = Descriptors()
-        words = np.concatenate([descriptor.folder(folder) for folder in glob.glob(input_folder + '/*')])
+        words = np.concatenate([descriptor.folder(folder, limit) for folder in glob.glob(input_folder + '/*')])
         print("Training GMM of size", self.K)
         self.means, self.covariances, self.weights = self.dictionary(words, self.K)
         # Throw away gaussians with weights that are too small:
@@ -65,8 +65,8 @@ class Gmm:
 
 class Descriptors:
     """ Convert image to features"""
-    def folder(self, folder):
-        files = glob.glob(folder + "/*.jpg")
+    def folder(self, folder, limit):
+        files = glob.glob(folder + "/*.jpg")[:limit]
         print("Calculating descriptors. Number of images is", len(files))
         return np.concatenate([self.image(file) for file in files])
 
@@ -84,15 +84,15 @@ class FisherVector:
     def __init__(self, gmm):
         self.gmm = gmm
 
-    def features(self, folder):
+    def features(self, folder, limit):
         folders = glob.glob(folder + "/*")
-        features = {f: self.get_fisher_vectors_from_folder(f, self.gmm) for f in folders}
+        features = {f: self.get_fisher_vectors_from_folder(f, self.gmm, limit) for f in folders}
         return features
 
 
     @staticmethod
-    def get_fisher_vectors_from_folder(folder, gmm):
-        files = glob.glob(folder + "/*.jpg")
+    def get_fisher_vectors_from_folder(folder, gmm, limit):
+        files = glob.glob(folder + "/*.jpg")[:limit]
         descriptors = Descriptors()
         return np.float32([FisherVector._fisher_vector(descriptors.image(file), gmm) for file in files])
 
@@ -209,16 +209,23 @@ def success_rate(classifier, features):
 @click.option('-d', '--dir', default='.', help='Directory of images (default: ./)')
 @click.option('-g', '--loadgmm', default=False, is_flag=True, help='Load gmm dictionary from pickles')
 @click.option('-n', '--number', default=5, help='Number of words in gmm dictionary')
-def main(dir, loadgmm, number):
+@click.option('-l', '--limit', default=50, help='Number of images to read')
+def main(dir, loadgmm, number, limit):
+    """
+    * Create a GMM using the training images.
+    * Use this GMM to create feature vectors of training images.
+    * Train an SVM on training images.
+    * Predict using SVM on training images.
+    """
     print(dir, loadgmm, number)
     gmm = Gmm(K=number)
     if loadgmm:
         gmm.load()
     else:
-        gmm.generate(input_folder=dir)
+        gmm.generate(input_folder=dir, limit=limit)
 
     fisher_vector = FisherVector(gmm)
-    features = fisher_vector.features(dir)
+    features = fisher_vector.features(dir, limit)
     # TBD, split the features into training and validation
     classifier = train(features)
     rate = success_rate(classifier, features)
