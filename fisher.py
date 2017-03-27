@@ -189,6 +189,8 @@ def train(features):
     # import ipdb as pdb; pdb.set_trace()
     feature_values = list(features.values())
     X = np.concatenate(feature_values)
+    import pandas as pd
+    pd.DataFrame(X).to_csv('features.csv')
     Y = np.concatenate([np.float32([i] * len(v)) for i, v in zip(range(0, len(features)), feature_values)])
 
     clf = svm.SVC()
