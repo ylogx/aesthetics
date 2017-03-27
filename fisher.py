@@ -86,43 +86,34 @@ class FisherVector:
 
     def features(self, folder, limit):
         folders = glob.glob(folder + "/*")
-        features = {f: self.get_fisher_vectors_from_folder(f, self.gmm, limit) for f in folders}
+        features = {f: self.get_fisher_vectors_from_folder(f, limit) for f in folders}
         return features
 
-
-    @staticmethod
-    def get_fisher_vectors_from_folder(folder, gmm, limit):
+    def get_fisher_vectors_from_folder(self, folder, limit):
         files = glob.glob(folder + "/*.jpg")[:limit]
         descriptors = Descriptors()
-        return np.float32([FisherVector._fisher_vector(descriptors.image(file), gmm) for file in files])
+        return np.float32([self._fisher_vector(descriptors.image(file)) for file in files])
 
-
-    @staticmethod
-    def _fisher_vector(samples, gmm):
+    def _fisher_vector(self, samples):
         """
         :param samples: X
-        :param gmm: Gmm
         :return: np.array fisher vector
         """
-        means, covariances, w = gmm.means, gmm.covariances, gmm.weights
-        s0, s1, s2 = FisherVector._likelihood_statistics(samples, means, covariances, w)
+        means, covariances, weights = self.gmm.means, self.gmm.covariances, self.gmm.weights
+        s0, s1, s2 = self._likelihood_statistics(samples)
         T = samples.shape[0]
         diagonal_covariances = np.float32([np.diagonal(covariances[k]) for k in range(0, covariances.shape[0])])
         """ Refer page 4, first column of reference [1] """
-        weights = FisherVector._fisher_vector_weights(s0, s1, s2, means, diagonal_covariances, w, T)
-        means = FisherVector._fisher_vector_means(s0, s1, s2, means, diagonal_covariances, w, T)
-        sigma = FisherVector._fisher_vector_sigma(s0, s1, s2, means, diagonal_covariances, w, T)
+        g_weights = self._fisher_vector_weights(s0, s1, s2, means, diagonal_covariances, weights, T)
+        means = self._fisher_vector_means(s0, s1, s2, means, diagonal_covariances, weights, T)
+        g_sigma = self._fisher_vector_sigma(s0, s1, s2, means, diagonal_covariances, weights, T)
         # FIXME: Weights are one dimensional here.
         # fv = np.concatenate([np.concatenate(weights), np.concatenate(means), np.concatenate(sigma)])
-        fv = np.concatenate([weights, np.concatenate(means), np.concatenate(sigma)])
-
-        fv = FisherVector.normalize(fv)     # TODO: Normalizing before removing zeros
-
+        fv = np.concatenate([g_weights, np.concatenate(means), np.concatenate(g_sigma)])
+        fv = self.normalize(fv)
         return fv
 
-
-    @staticmethod
-    def _likelihood_statistics(samples, means, covariances, weights):
+    def _likelihood_statistics(self, samples):
         """
         :param samples: X
         :return: 0th order, 1st order, 2nd order statistics 
@@ -131,6 +122,8 @@ class FisherVector:
         def likelihood_moment(x, posterior_probability, moment):
             x_moment = np.power(np.float32(x), moment) if moment > 0 else np.float32([1])
             return x_moment * posterior_probability
+
+        means, covariances, weights = self.gmm.means, self.gmm.covariances, self.gmm.weights
 
         statistics_0_order, statistics_1_order, statistics_2_order = {}, {}, {}
         samples = zip(range(0, len(samples)), samples)
