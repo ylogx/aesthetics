@@ -1,7 +1,8 @@
 from distutils.core import setup
+from setuptools import find_packages
 
 def get_version():
-    return '0.0.1'
+    return '0.0.2'
 
 def get_requirements():
     with open('requirements.txt', 'rU') as fhan:
@@ -27,7 +28,7 @@ setup(
     name='Aesthetics',
     description='Image Aesthetics Toolkit',
     version=get_version(),
-    packages=['aesthetics'],
+    packages=find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests"]),
     license='GPLv3+',
     author='Shubham Chaudhary',
     author_email='me@shubhamchaudhary.in',
