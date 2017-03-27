@@ -1,6 +1,5 @@
-def main():
-    return 0
-
+# -*- coding: utf-8 -*-
+from aesthetics.fisher.cli import main
 
 if __name__ == '__main__':
     import sys
