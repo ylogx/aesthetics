@@ -1,5 +1,8 @@
-# ava
-AVA (Image Aesthetic Visual Analysis) dataset and fast multi-threaded downloader
+# Aesthetics
+
+This repo provides:
+* Fisher Vector implementation
+* AVA (Image Aesthetic Visual Analysis) dataset and fast multi-threaded downloader
 
 
 # Downloader
