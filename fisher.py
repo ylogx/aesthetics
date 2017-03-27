@@ -31,7 +31,7 @@ class Gmm:
         descriptor = Descriptors()
         words = np.concatenate([descriptor.folder(folder, limit) for folder in glob.glob(input_folder + '/*')])
         print("Training GMM of size", self.K)
-        self.means, self.covariances, self.weights = self.dictionary(words, self.K)
+        self.means, self.covariances, self.weights = self.train_expectation_maximisation(words, self.K)
         # Throw away gaussians with weights that are too small:
         self.means = self.remove_too_small(self.means, self.weights)
         self.covariances = self.remove_too_small(self.covariances, self.weights)
@@ -55,7 +55,7 @@ class Gmm:
         np.save("weights.gmm", self.weights)
 
     @staticmethod
-    def dictionary(descriptors, K):
+    def train_expectation_maximisation(descriptors, K):
         """ See reference [2] """
         em = cv2.ml.EM_create()
         em.setClustersNumber(K)
@@ -76,7 +76,7 @@ class Descriptors:
         # img = cv2.resize(img, (256, 256))
         # _ , descriptors = cv2.xfeatures2d.SIFT_create().detectAndCompute(img, None)
         _, descriptors = cv2.ORB_create().detectAndCompute(img, None)
-        print(filename, descriptors)
+        print('Descriptors:', filename, descriptors.shape)
         return descriptors
 
 
@@ -201,7 +201,9 @@ def success_rate(classifier, features):
     feature_values = list(features.values())
     X = np.concatenate(feature_values)
     Y = np.concatenate([np.float32([i] * len(v)) for i, v in zip(range(0, len(feature_values)), feature_values)])
-    res = float(sum([a == b for a, b in zip(classifier.predict(X), Y)])) / len(Y)
+    y_pred = classifier.predict(X)
+    print('predictions:', list(zip(Y, y_pred)))
+    res = float(sum([a == b for a, b in zip(y_pred, Y)])) / len(Y)
     return res
 
 
