@@ -39,11 +39,11 @@ class FisherVector(object):
         diagonal_covariances = np.float32([np.diagonal(covariances[k]) for k in range(0, covariances.shape[0])])
         """ Refer page 4, first column of reference [1] """
         g_weights = self._fisher_vector_weights(s0, s1, s2, means, diagonal_covariances, weights, T)
-        means = self._fisher_vector_means(s0, s1, s2, means, diagonal_covariances, weights, T)
+        g_means = self._fisher_vector_means(s0, s1, s2, means, diagonal_covariances, weights, T)
         g_sigma = self._fisher_vector_sigma(s0, s1, s2, means, diagonal_covariances, weights, T)
         # FIXME: Weights are one dimensional here.
-        # fv = np.concatenate([np.concatenate(weights), np.concatenate(means), np.concatenate(sigma)])
-        fv = np.concatenate([g_weights, np.concatenate(means), np.concatenate(g_sigma)])
+        fv = np.concatenate([np.concatenate(g_weights), np.concatenate(g_means), np.concatenate(g_sigma)])
+        # fv = np.concatenate([g_weights, np.concatenate(means), np.concatenate(g_sigma)])
         fv = self.normalize(fv)
         return fv
 
@@ -58,25 +58,23 @@ class FisherVector(object):
             x_moment = np.power(np.float32(x), moment) if moment > 0 else np.float32([1])
             return x_moment * posterior_probability
 
+        def zeros(like):
+            return np.zeros(like.shape).tolist()
+
         means, covariances, weights = self.gmm.means, self.gmm.covariances, self.gmm.weights
-
-        statistics_0_order, statistics_1_order, statistics_2_order = {}, {}, {}
-        samples = zip(range(0, len(samples)), samples)
-
-        g = [multivariate_normal(mean=means[k], cov=covariances[k]) for k in range(0, len(weights))]
-
-        gaussians = {index: np.array([g_k.pdf(x) for g_k in g]) for index, x in samples}
+        normals = [multivariate_normal(mean=means[k], cov=covariances[k]) for k in range(0, len(weights))]
+        """ Gaussian Normals """
+        gaussian_pdfs = {index: np.array([g_k.pdf(sample) for g_k in normals]) for index, sample in enumerate(samples)}
         """ u(x) for equation 15, page 4 in reference 1 """
-
+        statistics_0_order, statistics_1_order, statistics_2_order = zeros(weights), zeros(weights), zeros(weights)
         for k in range(0, len(weights)):
-            statistics_0_order[k], statistics_1_order[k], statistics_2_order[k] = 0, 0, 0
-            for index, x in samples:
-                posterior_probability = FisherVector.posterior_probability(gaussians[index], weights)
-                statistics_0_order[k] = statistics_0_order[k] + likelihood_moment(x, posterior_probability[k], 0)
-                statistics_1_order[k] = statistics_1_order[k] + likelihood_moment(x, posterior_probability[k], 1)
-                statistics_2_order[k] = statistics_2_order[k] + likelihood_moment(x, posterior_probability[k], 2)
+            for index, sample in enumerate(samples):
+                posterior_probability = FisherVector.posterior_probability(gaussian_pdfs[index], weights)
+                statistics_0_order[k] = statistics_0_order[k] + likelihood_moment(sample, posterior_probability[k], 0)
+                statistics_1_order[k] = statistics_1_order[k] + likelihood_moment(sample, posterior_probability[k], 1)
+                statistics_2_order[k] = statistics_2_order[k] + likelihood_moment(sample, posterior_probability[k], 2)
 
-        return statistics_0_order, statistics_1_order, statistics_2_order
+        return np.array(statistics_0_order), np.array(statistics_1_order), np.array(statistics_2_order)
 
     @staticmethod
     def posterior_probability(u_gaussian, weights):
