@@ -6,8 +6,8 @@ References used below:
 [2]: http://www.vlfeat.org/api/gmm-fundamentals.html
 """
 import glob
-import os
 import multiprocessing
+import os
 
 import numpy as np
 from scipy.stats import multivariate_normal
@@ -36,9 +36,21 @@ class FisherVector(object):
         return np.float32(vectors)
 
     def fisher_vector_of_file(self, filename):
+        import cv2
+        img = cv2.imread(filename)
+        full_fisher = self.fisher_vector_of_image(img)
+        x, _, _ = img.shape
+        loc_mid = int(x / 3)
+        loc_bottom = int(2 * x / 3)
+        top_fisher = self.fisher_vector_of_image(img[0:loc_mid])
+        middle_fisher = self.fisher_vector_of_image(img[loc_mid + 1:loc_bottom])
+        bottom_fisher = self.fisher_vector_of_image(img[loc_bottom + 1:x])
+        return np.concatenate((full_fisher, top_fisher, middle_fisher, bottom_fisher))
+
+    def fisher_vector_of_image(self, img):
         from aesthetics.fisher import Descriptors
         descriptors = Descriptors()
-        return self._fisher_vector(descriptors.image(filename))
+        return self._fisher_vector(descriptors.image(img))
 
     def _fisher_vector(self, samples):
         """

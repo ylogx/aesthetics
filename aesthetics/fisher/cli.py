@@ -58,7 +58,9 @@ def main(dir, loadgmm, number, limit):
 
 
 if __name__ == '__main__':
+    import logging
     import sys
 
+    logging.basicConfig(level=logging.DEBUG)
     sys.exit(main())
 
