@@ -5,11 +5,13 @@ References used below:
 [1]: Image Classification with the Fisher Vector: https://hal.inria.fr/file/index/docid/830491/filename/journal.pdf
 [2]: http://www.vlfeat.org/api/gmm-fundamentals.html
 """
-
 import glob
+import os
+from concurrent.futures import ProcessPoolExecutor
 
 import numpy as np
 from scipy.stats import multivariate_normal
+import tqdm
 
 
 class FisherVector(object):
@@ -22,11 +24,19 @@ class FisherVector(object):
         return features
 
     def get_fisher_vectors_from_folder(self, folder, limit):
-        from aesthetics.fisher import Descriptors
-
         files = glob.glob(folder + "/*.jpg")[:limit]
+
+        with ProcessPoolExecutor() as pool:
+            futures = pool.map(self.fisher_vector_of_file, files)
+            desc = 'Creating Fisher Vectors {} images of folder {}'.format(len(files), os.path.split(folder)[-1])
+            futures = tqdm.tqdm(futures, total=len(files), desc=desc, unit='image')
+            vectors = list(futures)
+        return np.float32(vectors)
+
+    def fisher_vector_of_file(self, filename):
+        from aesthetics.fisher import Descriptors
         descriptors = Descriptors()
-        return np.float32([self._fisher_vector(descriptors.image(file)) for file in files])
+        return self._fisher_vector(descriptors.image(filename))
 
     def _fisher_vector(self, samples):
         """

@@ -1,5 +1,6 @@
 
 import glob
+import logging
 
 import cv2  # v3.2.0
 import numpy as np
@@ -19,7 +20,7 @@ class Descriptors(object):
         # img = cv2.resize(img, (256, 256))
         # _ , descriptors = cv2.xfeatures2d.SIFT_create().detectAndCompute(img, None)
         _, descriptors = cv2.ORB_create().detectAndCompute(img, None)
-        print('Descriptors:', filename, descriptors.shape)
+        logging.debug('Descriptors:', filename, descriptors.shape)
         return descriptors
 
 
