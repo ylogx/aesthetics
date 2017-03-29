@@ -32,7 +32,8 @@ def success_rate(classifier, features):
 @click.option('-g', '--loadgmm', default=False, is_flag=True, help='Load gmm dictionary from pickles')
 @click.option('-n', '--number', default=5, help='Number of words in gmm dictionary')
 @click.option('-l', '--limit', default=50, help='Number of images to read')
-def main(dir, loadgmm, number, limit):
+@click.option('-v', '--validation-dir', default=None, help='Directory of images (default: None)')
+def main(dir, loadgmm, number, limit, validation_dir):
     """
     * Create a GMM using the training images.
     * Use this GMM to create feature vectors of training images.
@@ -41,7 +42,7 @@ def main(dir, loadgmm, number, limit):
     """
     from aesthetics.fisher import Gmm
     from aesthetics.fisher import FisherVector
-    print(dir, loadgmm, number)
+    print(dir, loadgmm, number, limit, validation_dir)
     gmm = Gmm(K=number)
     if loadgmm:
         gmm.load()
@@ -54,6 +55,10 @@ def main(dir, loadgmm, number, limit):
     classifier = train(features)
     rate = success_rate(classifier, features)
     print("Success rate is", rate)
+    if validation_dir is not None:
+        validation_features = fisher_vector.features(validation_dir, limit)
+        rate = success_rate(classifier, validation_features)
+        print("Success rate is", rate)
     return 0
 
 
