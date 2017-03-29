@@ -7,11 +7,10 @@ References used below:
 """
 import glob
 import os
-from concurrent.futures import ProcessPoolExecutor
+import multiprocessing
 
 import numpy as np
 from scipy.stats import multivariate_normal
-import tqdm
 
 
 class FisherVector(object):
@@ -26,11 +25,14 @@ class FisherVector(object):
     def get_fisher_vectors_from_folder(self, folder, limit):
         files = glob.glob(folder + "/*.jpg")[:limit]
 
-        with ProcessPoolExecutor() as pool:
-            futures = pool.map(self.fisher_vector_of_file, files)
-            desc = 'Creating Fisher Vectors {} images of folder {}'.format(len(files), os.path.split(folder)[-1])
-            futures = tqdm.tqdm(futures, total=len(files), desc=desc, unit='image')
-            vectors = list(futures)
+        with multiprocessing.Pool() as pool:
+            desc = 'Creating Fisher Vectors in parallel for {} images of folder {}'.format(
+                len(files),
+                os.path.split(folder)[-1]
+            )
+            print(desc)
+            # files = tqdm.tqdm(files, total=len(files), desc=desc, unit='image')
+            vectors = pool.map(self.fisher_vector_of_file, files)
         return np.float32(vectors)
 
     def fisher_vector_of_file(self, filename):
