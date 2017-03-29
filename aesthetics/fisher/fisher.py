@@ -28,11 +28,19 @@ class FisherVector(object):
 
         with ProcessPoolExecutor() as pool:
             # futures = pool.map(self._worker, files)
-            futures = map(self.fisher_vector_of_file, files)
+            futures = map(self._worker, files)
             desc = 'Creating Fisher Vectors {} images of folder {}'.format(len(files), os.path.split(folder)[-1])
             futures = tqdm.tqdm(futures, total=len(files), desc=desc, unit='image')
             vectors = [f for f in futures if f is not None]
         return np.float32(vectors)
+
+    def _worker(self, *arg, **kwargs):
+        try:
+            return self.fisher_vector_of_file(*arg, **kwargs)
+        except Exception as e:
+            # print(e)
+            # import pdb; pdb.post_mortem()
+            return None
 
     def fisher_vector_of_file(self, filename):
         import cv2
