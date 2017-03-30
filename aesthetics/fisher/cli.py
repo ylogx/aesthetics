@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import logging
+
 import click
 import numpy as np
 from sklearn import svm
@@ -29,11 +31,11 @@ def success_rate(classifier, features):
 
 @click.command()
 @click.option('-d', '--dir', default='.', help='Directory of images (default: ./)')
-@click.option('-g', '--loadgmm', default=False, is_flag=True, help='Load gmm dictionary from pickles')
+@click.option('-g', '--load-gmm', default=False, is_flag=True, help='Load gmm dictionary from pickles')
 @click.option('-n', '--number', default=5, help='Number of words in gmm dictionary')
 @click.option('-l', '--limit', default=50, help='Number of images to read')
 @click.option('-v', '--validation-dir', default=None, help='Directory of images (default: None)')
-def main(dir, loadgmm, number, limit, validation_dir):
+def main(dir, load_gmm, number, limit, validation_dir):
     """
     * Create a GMM using the training images.
     * Use this GMM to create feature vectors of training images.
@@ -42,9 +44,9 @@ def main(dir, loadgmm, number, limit, validation_dir):
     """
     from aesthetics.fisher import Gmm
     from aesthetics.fisher import FisherVector
-    print(dir, loadgmm, number, limit, validation_dir)
+    logging.debug('dir=%s, load_gmm=%s, number=%s, limit=%s, val_dir=%s', dir, load_gmm, number, limit, validation_dir)
     gmm = Gmm(K=number)
-    if loadgmm:
+    if load_gmm:
         gmm.load()
     else:
         gmm.generate(input_folder=dir, limit=limit)
@@ -54,16 +56,15 @@ def main(dir, loadgmm, number, limit, validation_dir):
     # TBD, split the features into training and validation
     classifier = train(features)
     rate = success_rate(classifier, features)
-    print("Success rate is", rate)
+    logging.info("Self test success rate is", rate)
     if validation_dir is not None:
         validation_features = fisher_vector.features(validation_dir, limit)
         rate = success_rate(classifier, validation_features)
-        print("Success rate is", rate)
+        logging.info("Validation test success rate is", rate)
     return 0
 
 
 if __name__ == '__main__':
-    import logging
     import sys
 
     logging.basicConfig(level=logging.DEBUG)
