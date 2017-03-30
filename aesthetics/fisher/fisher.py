@@ -57,16 +57,17 @@ class FisherVector(object):
     def fisher_vector_of_image(self, img):
         from aesthetics.fisher import Descriptors
         descriptors = Descriptors()
-        return self._fisher_vector(descriptors.image(img))
+        img_descriptors = descriptors.image(img)
+        return self._fisher_vector(img_descriptors)
 
-    def _fisher_vector(self, samples):
+    def _fisher_vector(self, img_descriptors):
         """
-        :param samples: X
+        :param img_descriptors: X
         :return: np.array fisher vector
         """
         means, covariances, weights = self.gmm.means, self.gmm.covariances, self.gmm.weights
-        s0, s1, s2 = self._likelihood_statistics(samples)
-        T = samples.shape[0]
+        s0, s1, s2 = self._likelihood_statistics(img_descriptors)
+        T = img_descriptors.shape[0]
         diagonal_covariances = np.float32([np.diagonal(covariances[k]) for k in range(0, covariances.shape[0])])
         """ Refer page 4, first column of reference [1] """
         g_weights = self._fisher_vector_weights(s0, s1, s2, means, diagonal_covariances, weights, T)
@@ -78,9 +79,9 @@ class FisherVector(object):
         fv = self.normalize(fv)
         return fv
 
-    def _likelihood_statistics(self, samples):
+    def _likelihood_statistics(self, img_descriptors):
         """
-        :param samples: X
+        :param img_descriptors: X
         :return: 0th order, 1st order, 2nd order statistics
                  as described by equation 20, 21, 22 in reference [1]
         """
@@ -95,11 +96,11 @@ class FisherVector(object):
         means, covariances, weights = self.gmm.means, self.gmm.covariances, self.gmm.weights
         normals = [multivariate_normal(mean=means[k], cov=covariances[k]) for k in range(0, len(weights))]
         """ Gaussian Normals """
-        gaussian_pdfs = [np.array([g_k.pdf(sample) for g_k in normals]) for sample in samples]
+        gaussian_pdfs = [np.array([g_k.pdf(sample) for g_k in normals]) for sample in img_descriptors]
         """ u(x) for equation 15, page 4 in reference 1 """
         statistics_0_order, statistics_1_order, statistics_2_order = zeros(weights), zeros(weights), zeros(weights)
         for k in range(0, len(weights)):
-            for index, sample in enumerate(samples):
+            for index, sample in enumerate(img_descriptors):
                 posterior_probability = FisherVector.posterior_probability(gaussian_pdfs[index], weights)
                 statistics_0_order[k] = statistics_0_order[k] + likelihood_moment(sample, posterior_probability[k], 0)
                 statistics_1_order[k] = statistics_1_order[k] + likelihood_moment(sample, posterior_probability[k], 1)
