@@ -30,8 +30,8 @@ class Descriptors(object):
     def image(self, img):
         # img = cv2.resize(img, (256, 256))
         if self.feature_transform is None:
-            # self.feature_transform = cv2.xfeatures2d.SIFT_create()
-            self.feature_transform = cv2.ORB_create()
+            self.feature_transform = cv2.xfeatures2d.SIFT_create()
+            # self.feature_transform = cv2.ORB_create()
         _ , descriptors = self.feature_transform.detectAndCompute(img, None)
         return descriptors
 
