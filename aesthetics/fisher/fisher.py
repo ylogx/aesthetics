@@ -27,11 +27,14 @@ class FisherVector(object):
         files = glob.glob(folder + "/*.jpg")[:limit]
 
         with ProcessPoolExecutor() as pool:
-            # futures = pool.map(self._worker, files)
-            futures = map(self._worker, files)
+            futures = pool.map(self._worker, files)
+            # futures = map(self._worker, files)
             desc = 'Creating Fisher Vectors {} images of folder {}'.format(len(files), os.path.split(folder)[-1])
             futures = tqdm.tqdm(futures, total=len(files), desc=desc, unit='image')
-            vectors = [f for f in futures if f is not None]
+            vectors = [f for f in futures if f is not None and len(f) > 0]
+            max_shape = np.array([v.shape[0] for v in vectors]).max()
+            vectors = [v for v in vectors if v.shape[0] == max_shape]
+        # return np.array(vectors)    # Can't do np.float32, because all images may not have same number of features
         return np.float32(vectors)
 
     def _worker(self, *arg, **kwargs):
@@ -43,22 +46,32 @@ class FisherVector(object):
             return None
 
     def fisher_vector_of_file(self, filename):
+        def section_fisher(img_section, full_fisher):
+            sec_fisher = self.fisher_vector_of_image(img_section)
+            if sec_fisher is None:
+                sec_fisher = np.zeros(full_fisher.shape)
+            return sec_fisher
+
         import cv2
         img = cv2.imread(filename)
         full_fisher = self.fisher_vector_of_image(img)
         x, _, _ = img.shape
         loc_mid = int(x / 3)
         loc_bottom = int(2 * x / 3)
-        top_fisher = self.fisher_vector_of_image(img[0:loc_mid])
-        middle_fisher = self.fisher_vector_of_image(img[loc_mid + 1:loc_bottom])
-        bottom_fisher = self.fisher_vector_of_image(img[loc_bottom + 1:x])
+        top_fisher = section_fisher(img[0:loc_mid], full_fisher)
+        middle_fisher = section_fisher(img[loc_mid + 1:loc_bottom], full_fisher)
+        bottom_fisher = section_fisher(img[loc_bottom + 1:x], full_fisher)
         return np.concatenate((full_fisher, top_fisher, middle_fisher, bottom_fisher))
+
 
     def fisher_vector_of_image(self, img):
         from aesthetics.fisher import Descriptors
         descriptors = Descriptors()
         img_descriptors = descriptors.image(img)
-        return self._fisher_vector(img_descriptors)
+        if img_descriptors is not None:
+            return self._fisher_vector(img_descriptors)
+        else:
+            return np.empty(0)
 
     def _fisher_vector(self, img_descriptors):
         """
