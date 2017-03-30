@@ -3,13 +3,13 @@ import logging
 
 import click
 import numpy as np
+import pandas as pd
 from sklearn import svm
 
 def train(features):
-    # import ipdb as pdb; pdb.set_trace()
+    logging.info('Key ordering: %s', list(features.keys()))
     feature_values = list(features.values())
     X = np.concatenate(feature_values)
-    import pandas as pd
     pd.DataFrame(X).to_csv('features.csv')
     Y = np.concatenate([np.float32([i] * len(v)) for i, v in zip(range(0, len(features)), feature_values)])
 
@@ -30,7 +30,7 @@ def success_rate(classifier, features):
     y_pred = classifier.predict(X)
     # logging.debug('Predictions:\n%s', list(zip(Y, y_pred)))
     logging.info('Confusion Matrix:\n%s', confusion_matrix(y_true=Y, y_pred=y_pred))
-    report = classification_report(y_true=Y, y_pred=y_pred, target_names=['low', 'high'])
+    report = classification_report(y_true=Y, y_pred=y_pred, target_names=list(features.keys()))
     logging.info('Classification Report:\n%s', report)
     return precision_score(y_true=Y, y_pred=y_pred)
 

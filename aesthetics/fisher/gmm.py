@@ -22,7 +22,7 @@ class Gmm(object):
         from aesthetics.fisher import Descriptors
 
         descriptor = Descriptors()
-        img_descriptors = [descriptor.folder(folder, limit) for folder in glob.glob(input_folder + '/*')]
+        img_descriptors = [descriptor.folder(folder, limit) for folder in sorted(glob.glob(input_folder + '/*'))]
         max_shape = np.array([v.shape[0] for v in img_descriptors]).max()
         img_descriptors = list(filter(lambda x: x is not None and x.shape[0] == max_shape, img_descriptors))
         words = np.concatenate(img_descriptors)

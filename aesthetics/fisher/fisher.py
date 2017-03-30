@@ -8,6 +8,7 @@ References used below:
 import glob
 import os
 from concurrent.futures import ProcessPoolExecutor
+from collections import OrderedDict
 
 import numpy as np
 import tqdm
@@ -19,8 +20,8 @@ class FisherVector(object):
         self.gmm = gmm
 
     def features(self, folder, limit):
-        folders = glob.glob(folder + "/*")
-        features = {f: self.get_fisher_vectors_from_folder(f, limit) for f in folders}
+        folders = sorted(glob.glob(folder + "/*"))
+        features = OrderedDict([(f, self.get_fisher_vectors_from_folder(f, limit)) for f in folders])
         return features
 
     def get_fisher_vectors_from_folder(self, folder, limit):
