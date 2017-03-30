@@ -2,7 +2,7 @@ from distutils.core import setup
 from setuptools import find_packages
 
 def get_version():
-    return '0.0.2'
+    return '0.1.0'
 
 def get_requirements():
     with open('requirements.txt', 'rU') as fhan:
