@@ -59,7 +59,6 @@ def main(dir, load_gmm, number, limit, validation_dir):
 
     fisher_vector = FisherVector(gmm)
     features = fisher_vector.features(dir, limit)
-    # TBD, split the features into training and validation
     classifier = train(features)
     rate = success_rate(classifier, features)
     logging.info("Self test success rate is %.2f", rate)

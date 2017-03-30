@@ -29,7 +29,6 @@ class FisherVector(object):
 
         with ProcessPoolExecutor() as pool:
             futures = pool.map(self._worker, files)
-            # futures = map(self._worker, files)
             desc = 'Creating Fisher Vectors {} images of folder {}'.format(len(files), os.path.split(folder)[-1])
             futures = tqdm.tqdm(futures, total=len(files), desc=desc, unit='image')
             vectors = [f for f in futures if f is not None and len(f) > 0]
@@ -42,7 +41,6 @@ class FisherVector(object):
         try:
             return self.fisher_vector_of_file(*arg, **kwargs)
         except Exception as e:
-            # print(e)
             # import pdb; pdb.post_mortem()
             return None
 
@@ -87,9 +85,7 @@ class FisherVector(object):
         g_weights = self._fisher_vector_weights(s0, s1, s2, means, diagonal_covariances, weights, T)
         g_means = self._fisher_vector_means(s0, s1, s2, means, diagonal_covariances, weights, T)
         g_sigma = self._fisher_vector_sigma(s0, s1, s2, means, diagonal_covariances, weights, T)
-        # FIXME: Weights are one dimensional here.
         fv = np.concatenate([np.concatenate(g_weights), np.concatenate(g_means), np.concatenate(g_sigma)])
-        # fv = np.concatenate([g_weights, np.concatenate(means), np.concatenate(g_sigma)])
         fv = self.normalize(fv)
         return fv
 
