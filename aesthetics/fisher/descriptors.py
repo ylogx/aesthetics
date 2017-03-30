@@ -9,6 +9,8 @@ import tqdm
 
 class Descriptors(object):
     """ Convert image to features"""
+    def __init__(self):
+        self.feature_transform = None
 
     def folder(self, folder, limit):
         files = glob.glob(folder + "/*.jpg")[:limit]
@@ -27,8 +29,10 @@ class Descriptors(object):
 
     def image(self, img):
         # img = cv2.resize(img, (256, 256))
-        # _ , descriptors = cv2.xfeatures2d.SIFT_create().detectAndCompute(img, None)
-        _, descriptors = cv2.ORB_create().detectAndCompute(img, None)
+        if self.feature_transform is None:
+            # self.feature_transform = cv2.xfeatures2d.SIFT_create()
+            self.feature_transform = cv2.ORB_create()
+        _ , descriptors = self.feature_transform.detectAndCompute(img, None)
         return descriptors
 
 
