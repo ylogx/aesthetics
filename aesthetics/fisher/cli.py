@@ -19,14 +19,20 @@ def train(features):
 
 
 def success_rate(classifier, features):
-    print("Applying the classifier...")
+    from sklearn.metrics import classification_report
+    from sklearn.metrics import confusion_matrix
+    from sklearn.metrics import precision_score
+
+    logging.info('Applying the classifier...')
     feature_values = list(features.values())
     X = np.concatenate(feature_values)
     Y = np.concatenate([np.float32([i] * len(v)) for i, v in zip(range(0, len(feature_values)), feature_values)])
     y_pred = classifier.predict(X)
-    print('predictions:', list(zip(Y, y_pred)))
-    res = float(sum([a == b for a, b in zip(y_pred, Y)])) / len(Y)
-    return res
+    # logging.debug('Predictions:\n%s', list(zip(Y, y_pred)))
+    logging.info('Confusion Matrix:\n%s', confusion_matrix(y_true=Y, y_pred=y_pred))
+    report = classification_report(y_true=Y, y_pred=y_pred, target_names=['low', 'high'])
+    logging.info('Classification Report:\n%s', report)
+    return precision_score(y_true=Y, y_pred=y_pred)
 
 
 @click.command()
@@ -56,11 +62,11 @@ def main(dir, load_gmm, number, limit, validation_dir):
     # TBD, split the features into training and validation
     classifier = train(features)
     rate = success_rate(classifier, features)
-    logging.info("Self test success rate is", rate)
+    logging.info("Self test success rate is %.2f", rate)
     if validation_dir is not None:
         validation_features = fisher_vector.features(validation_dir, limit)
         rate = success_rate(classifier, validation_features)
-        logging.info("Validation test success rate is", rate)
+        logging.info("Validation test success rate is %.2f", rate)
     return 0
 
 
