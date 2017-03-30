@@ -12,7 +12,9 @@ class Descriptors(object):
     def folder(self, folder, limit):
         files = glob.glob(folder + "/*.jpg")[:limit]
         print("Calculating descriptors. Number of images is", len(files))
-        return np.concatenate([self.image_file(file) for file in files])
+        descriptors = [self.image_file(file) for file in files]
+        descriptors = list(filter(lambda x: x is not None, descriptors))
+        return np.concatenate(descriptors)
 
     def image_file(self, filename):
         """ Refer section 2.2 of reference [1] """
