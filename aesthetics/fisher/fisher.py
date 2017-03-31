@@ -62,7 +62,6 @@ class FisherVector(object):
         bottom_fisher = section_fisher(img[loc_bottom + 1:x], full_fisher)
         return np.concatenate((full_fisher, top_fisher, middle_fisher, bottom_fisher))
 
-
     def fisher_vector_of_image(self, img):
         from aesthetics.fisher import Descriptors
         descriptors = Descriptors()

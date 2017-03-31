@@ -5,16 +5,30 @@ import click
 import numpy as np
 import pandas as pd
 from sklearn import svm
+from sklearn import ensemble
 
-def train(features):
+
+def ordered_dict_to_x_y(features):
     logging.info('Key ordering: %s', list(features.keys()))
     feature_values = list(features.values())
     X = np.concatenate(feature_values)
-    pd.DataFrame(X).to_csv('features.csv')
     Y = np.concatenate([np.float32([i] * len(v)) for i, v in zip(range(0, len(features)), feature_values)])
+    return X, Y
 
-    clf = svm.SVC()
+
+def train(features):
+    X, Y = ordered_dict_to_x_y(features)
+    pd.DataFrame(X).to_csv('features.csv')
+
+    clf = get_classification()
     clf.fit(X, Y)
+    pd.to_pickle(clf, 'classification.pkl')
+    return clf
+
+
+def get_classification():
+    clf = svm.SVC()
+    clf = ensemble.GradientBoostingClassifier()
     return clf
 
 
@@ -33,6 +47,23 @@ def success_rate(classifier, features):
     report = classification_report(y_true=Y, y_pred=y_pred, target_names=list(features.keys()))
     logging.info('Classification Report:\n%s', report)
     return precision_score(y_true=Y, y_pred=y_pred)
+
+
+def predict_from_url(url, *args, **kwargs):
+    import os
+    os.system('wget {}'.format(url))
+    image_path=os.path.split(url)[-1]
+    import cv2
+    img = cv2.imread(image_path)
+    cv2.imwrite(image_path, cv2.resize(img, (500, 500)))
+    return predict_image(image_path=image_path, *args, **kwargs)
+
+
+def predict_image(classifier, gmm, image_path):
+    from aesthetics.fisher import FisherVector
+    fv = FisherVector(gmm)
+    vector = fv.fisher_vector_of_file(image_path)
+    return classifier.predict(vector)
 
 
 @click.command()
