@@ -12,7 +12,7 @@ class Gmm(object):
         """
         As described in section 2.2, para 3 of reference [1]
 
-        :param K: Number of components
+        :param int K: Number of components
         """
         self.K = K
         self.means = None
@@ -28,10 +28,8 @@ class Gmm(object):
         and creates a gmm definition (mean, covariances, weights) from those
         image's features.
 
-        :param input_folder: Folder whose subfolder contains images
-        :type input_folder: str
-        :param limit: Number of images to be read
-        :type limit: int
+        :param str input_folder: Folder whose subfolder contains images
+        :param int limit: Number of images to be read
         :return: tuple(mean, covariance, weights)
         :rtype: tuple
         """
@@ -60,8 +58,7 @@ class Gmm(object):
         """
         Load gmm definition from self.save'd folder data
 
-        :param folder: Folder name
-        :type folder: str
+        :param str folder: Folder name
         :return: nothing
         """
         import os
