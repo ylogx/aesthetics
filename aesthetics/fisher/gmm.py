@@ -40,7 +40,7 @@ class Gmm(object):
         max_shape = np.array([v.shape[0] for v in img_descriptors]).max()
         img_descriptors = list(filter(lambda x: x is not None and x.shape[0] == max_shape, img_descriptors))
         words = np.concatenate(img_descriptors)
-        print("Training GMM of size", self.K)
+        # print("Training GMM of size", self.K)
         self.means, self.covariances, self.weights = self.train_expectation_maximisation(words, self.K)
         # Throw away gaussians with weights that are too small:
         self.means = self._remove_too_small(self.means, self.weights)
