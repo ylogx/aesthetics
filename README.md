@@ -1,7 +1,7 @@
 # Aesthetics
 
 This repo provides:
-* Fisher Vector implementation
+* [Fisher Vector implementation](https://github.com/shubhamchaudhary/aesthetics/tree/master/aesthetics/fisher)
 * AVA (Image Aesthetic Visual Analysis) dataset and fast multi-threaded downloader
 
 
