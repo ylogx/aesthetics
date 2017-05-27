@@ -46,7 +46,10 @@ class Descriptors(object):
         :rtype: np.array
         """
         img = cv2.imread(filename, 0)
-        return self.image(img)
+        if type(img) == np.ndarray:
+            return self.image(img)
+        else:
+            return None
 
     def image(self, img):
         """
@@ -55,7 +58,7 @@ class Descriptors(object):
         :return: Descriptors of the given image
         :rtype: np.array
         """
-        # img = cv2.resize(img, (256, 256))
+        # img = cv2.resize(img, (500, 500))
         if self.feature_transform is None:
             self.feature_transform = cv2.xfeatures2d.SIFT_create()
             # self.feature_transform = cv2.ORB_create()
