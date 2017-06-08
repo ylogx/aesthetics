@@ -52,7 +52,7 @@ class FisherVector(object):
         with ProcessPoolExecutor() as pool:
             futures = pool.map(self._worker, files)
             desc = 'Creating Fisher Vectors {} images of folder {}'.format(len(files), os.path.split(folder)[-1])
-            futures = tqdm.tqdm(futures, total=len(files), desc=desc, unit='image')
+            futures = tqdm.tqdm(futures, total=len(files), desc=desc, unit='image', ncols=120)
             vectors = [f for f in futures if f is not None and len(f) > 0]
             max_shape = np.array([v.shape[0] for v in vectors]).max()
             vectors = [v for v in vectors if v.shape[0] == max_shape]
@@ -81,6 +81,7 @@ class FisherVector(object):
 
         import cv2
         img = cv2.imread(filename)
+        img = cv2.resize(img, (500, 500))
         full_fisher = self.fisher_vector_of_image(img)
         x, _, _ = img.shape
         loc_mid = int(x / 3)
