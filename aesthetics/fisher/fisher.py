@@ -85,7 +85,7 @@ class FisherVector(object):
 
         def section_fisher(img_section, full_fisher):
             sec_fisher = self.fisher_vector_of_image_section(img_section)
-            if sec_fisher is None:
+            if sec_fisher.shape == (0,):
                 sec_fisher = np.zeros(full_fisher.shape)
             return sec_fisher
 
