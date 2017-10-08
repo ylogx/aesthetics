@@ -4,11 +4,13 @@
 ## Image Aesthetics Definition
 Image aesthetic evaluation aims to classify photos into high quality or low quality from the perspective of human.
 
-<img alt="Good vs Bad Image" src="https://i.imgur.com/X0aZWFd.png" height=300/>
+         High Quality Image           |            Low Quality Image
+:------------------------------------:|:-------------------------------------:
+![Good Image](https://i.imgur.com/ZGiqssA.png)  |  ![Bad Image](https://i.imgur.com/1do94BE.png)
 
 Image Aesthetics drills down to a classification problem:
-* Low Quality Image
-* High Quality Image
+* Low Quality Image <img alt="Bad Image" src="https://i.imgur.com/1do94BE.png" height=30/>
+* High Quality Image <img alt="Good Image" src="https://i.imgur.com/ZGiqssA.png" height=30/>
 
 A commonly used dataset for image aesthetics is AVA (Image Aesthetic Visual Analysis) dataset
 
@@ -37,11 +39,11 @@ Following image should clarify the importance of spatial pooling:
 
 ![Importance of spatial pooling](https://i.imgur.com/nZ3aYkL.png)
 
-For spatial pooling, the fisher vector paper recommends splitting the image into 4 versions:
-* Full image
-* 3 horizontal slices of the image
+For spatial pooling, the fisher vector paper recommends splitting the image into 4 patches:
+* Full image patch
+* 3 horizontal sliced patches of the image
 
-To generate the fisher vector of the image, as shown in the flowchart above, we concat the fisher vectors of the 4 individual versions of the image.
+To generate the fisher vector of the image, as shown in the flowchart above, we concat the fisher vectors of the 4 individual patches of the image.
 
 ## AVA Downloader
 ```sh
