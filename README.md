@@ -5,11 +5,34 @@ This repo provides:
 * AVA (Image Aesthetic Visual Analysis) dataset and fast multi-threaded downloader
 
 
-# Downloader
+
+## Fisher Vector
+Fisher Vector is a technique for generating features for images, which can be used by discriminative models like SVM. You can use fisher vectors for usecases like image classification (ImageNet), image aesthetics.
+<!-- Describe Patches by their deviation from Universal Generative Mixture Model. -->
+
+### Flow
+* We create local descriptors using SIFT for each image in the training set
+* We fit a Gausian Mixture Model (GMM) on descriptors for all images in training set.
+* Using this global GMM we generate features for each image
+
+![Fisher Vector flow](https://i.imgur.com/S5oAnEU.png)
+
+#### Spatial Pooling
+Spatial pooling is a technique to save the spatial information of the image while generating features. This is very important in image aesthetics because the look and feel of the image are highly dependent on the aspect ratio, placement of the objects in the image.
+
+For spatial pooling, the fisher vector paper recommends splitting the image into 4 versions:
+* Full image
+* 3 horizontal slices of the image
+
+To generate the fisher vector of the image, as shown in the flowchart above, we concat the fisher vectors of the 4 individual versions of the image.
+
+## AVA Downloader
 ```sh
 ./download.py --help
 ./download.py ava
 ```
+
+This is a WIP
 
 
 <!--# Downloaded dataset-->
