@@ -1,8 +1,19 @@
 # Aesthetics
 
-This repo provides:
+
+## Image Aesthetics Definition
+Image aesthetic evaluation aims to classify photos into high quality or low quality from the perspective of human.
+
+Image Aesthetics drills down to a classification problem:
+* Low Quality Image
+* High Quality Image
+
+A commonly used dataset for image aesthetics is AVA (Image Aesthetic Visual Analysis) dataset
+
+
+This repo provides following tools to help in image aesthetics problem:
 * [Fisher Vector implementation](https://github.com/shubhamchaudhary/aesthetics/tree/master/aesthetics/fisher)
-* AVA (Image Aesthetic Visual Analysis) dataset and fast multi-threaded downloader
+* AVA dataset and fast multi-threaded downloader
 
 
 
@@ -17,8 +28,12 @@ Fisher Vector is a technique for generating features for images, which can be us
 
 ![Fisher Vector flow](https://i.imgur.com/S5oAnEU.png)
 
-#### Spatial Pooling
+### Spatial Pooling
 Spatial pooling is a technique to save the spatial information of the image while generating features. This is very important in image aesthetics because the look and feel of the image are highly dependent on the aspect ratio, placement of the objects in the image.
+
+Following image should clarify the importance of spatial pooling:
+
+![Importance of spatial pooling](https://i.imgur.com/nZ3aYkL.png)
 
 For spatial pooling, the fisher vector paper recommends splitting the image into 4 versions:
 * Full image
