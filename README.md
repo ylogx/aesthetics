@@ -4,7 +4,7 @@
 ## Image Aesthetics Definition
 Image aesthetic evaluation aims to classify photos into high quality or low quality from the perspective of human.
 
-         High Quality Image           |            Low Quality Image
+High Quality Image                    |            Low Quality Image
 :------------------------------------:|:-------------------------------------:
 ![Good Image](https://i.imgur.com/ZGiqssA.png)  |  ![Bad Image](https://i.imgur.com/1do94BE.png)
 
