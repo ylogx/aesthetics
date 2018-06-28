@@ -28,7 +28,7 @@ class FisherVector(object):
         :param aesthetics.fisher.Gmm gmm: Trained gmm to be used
         """
         self.gmm = gmm
-
+        self.means, self.covariances, self.weights = self.gmm.means, self.gmm.covariances, self.gmm.weights
     def features(self, folder, limit):
         """
         :param str folder: Folder Name
@@ -118,7 +118,7 @@ class FisherVector(object):
         :return: fisher vector
         :rtype: np.array
         """
-        means, covariances, weights = self.gmm.means, self.gmm.covariances, self.gmm.weights
+        means, covariances, weights = self.means, self.covariances, self.weights
         s0, s1, s2 = self._likelihood_statistics(img_descriptors)
         T = img_descriptors.shape[0]
         diagonal_covariances = np.float32([np.diagonal(covariances[k]) for k in range(0, covariances.shape[0])])
