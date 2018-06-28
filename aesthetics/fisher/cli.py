@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from sklearn import svm
 from sklearn import ensemble
-
+fv = None
 
 def ordered_dict_to_x_y(features):
     logging.info('Key ordering: %s', list(features.keys()))
@@ -61,7 +61,8 @@ def predict_from_url(url, *args, **kwargs):
 
 def predict_image(classifier, gmm, image_path):
     from aesthetics.fisher import FisherVector
-    fv = FisherVector(gmm)
+    if fv is None:
+        fv = FisherVector(gmm)
     vector = fv.fisher_vector_of_file(image_path)
     return classifier.predict(vector)
 
