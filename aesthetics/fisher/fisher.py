@@ -13,7 +13,9 @@ descriptors = None
 class FisherVector(object):
     """
     Fisher Vector implementation using cv2 v3.2.0+ and python3.
+
     Key Methods:
+
     * fisher_vector_of_file(self, filename): Returns the fisher vector for given image file
     * get_fisher_vectors_from_folder(self, folder, limit): Returns fisher vectors for all images in given folder
     * features(self, folder, limit): Returns fisher vectors for all images in subfolders of given folder
@@ -21,6 +23,7 @@ class FisherVector(object):
     * fisher_vector_of_img_array(self, img): Sections the original image into three horizontal images of same
     dimensions and returns a concatenated array of the fisher vector of the original, top, middle and  segments
     of the image
+    
     References used below:
     [1]: Image Classification with the Fisher Vector: https://hal.inria.fr/file/index/docid/830491/filename/journal.pdf
     [2]: http://www.vlfeat.org/api/gmm-fundamentals.html
