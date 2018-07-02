@@ -7,18 +7,15 @@ import tqdm
 from collections import OrderedDict
 from concurrent.futures import ProcessPoolExecutor
 from scipy.stats import multivariate_normal
-
+descriptors = None
 
 class FisherVector(object):
     """
     Fisher Vector implementation using cv2 v3.2.0+ and python3.
-
     Key Methods:
-
     * fisher_vector_of_file(self, filename): Returns the fisher vector for given image file
     * get_fisher_vectors_from_folder(self, folder, limit): Returns fisher vectors for all images in given folder
     * features(self, folder, limit): Returns fisher vectors for all images in subfolders of given folder
-
     References used below:
     [1]: Image Classification with the Fisher Vector: https://hal.inria.fr/file/index/docid/830491/filename/journal.pdf
     [2]: http://www.vlfeat.org/api/gmm-fundamentals.html
@@ -104,8 +101,10 @@ class FisherVector(object):
         :return: fisher vector of given img array
         :rtype: np.array
         """
+        global descriptors
         from aesthetics.fisher import Descriptors
-        descriptors = Descriptors()
+        if descriptors is None:
+            descriptors = Descriptors()
         img_descriptors = descriptors.image(img)
         if img_descriptors is not None:
             return self._fisher_vector(img_descriptors)
@@ -189,4 +188,4 @@ class FisherVector(object):
         is used in step 3, algorithm 1, page 6 of reference [1] """
         v = np.sign(fisher_vector) * np.sqrt(abs(fisher_vector))  # Power normalization
         return v / np.sqrt(np.dot(v, v))  # L2 Normalization
-
+    
