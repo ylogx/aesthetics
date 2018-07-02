@@ -7,6 +7,7 @@ import tqdm
 from collections import OrderedDict
 from concurrent.futures import ProcessPoolExecutor
 from scipy.stats import multivariate_normal
+
 descriptors = None
 
 class FisherVector(object):
@@ -188,4 +189,3 @@ class FisherVector(object):
         is used in step 3, algorithm 1, page 6 of reference [1] """
         v = np.sign(fisher_vector) * np.sqrt(abs(fisher_vector))  # Power normalization
         return v / np.sqrt(np.dot(v, v))  # L2 Normalization
-    
