@@ -17,6 +17,10 @@ class FisherVector(object):
     * fisher_vector_of_file(self, filename): Returns the fisher vector for given image file
     * get_fisher_vectors_from_folder(self, folder, limit): Returns fisher vectors for all images in given folder
     * features(self, folder, limit): Returns fisher vectors for all images in subfolders of given folder
+    * section_fisher(img_section, full_fisher): Returns fisher vectors for a segment of the image
+    * fisher_vector_of_img_array(self, img): Sections the original image into three horizontal images of same
+    dimensions and returns a concatenated array of the fisher vector of the original, top, middle and  segments
+    of the image
     References used below:
     [1]: Image Classification with the Fisher Vector: https://hal.inria.fr/file/index/docid/830491/filename/journal.pdf
     [2]: http://www.vlfeat.org/api/gmm-fundamentals.html
@@ -189,3 +193,4 @@ class FisherVector(object):
         is used in step 3, algorithm 1, page 6 of reference [1] """
         v = np.sign(fisher_vector) * np.sqrt(abs(fisher_vector))  # Power normalization
         return v / np.sqrt(np.dot(v, v))  # L2 Normalization
+
