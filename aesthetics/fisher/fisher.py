@@ -158,16 +158,15 @@ class FisherVector(object):
         means, covariances, weights = self.gmm.means, self.gmm.covariances, self.gmm.weights
         normals = [multivariate_normal(mean=means[k], cov=covariances[k]) for k in range(0, len(weights))]
         """ Gaussian Normals """
-        gaussian_pdfs = [np.array([g_k.pdf(sample) for g_k in normals]) for sample in img_descriptors]
+        gaussian_pdfs = np.transpose(np.array(list(g_k.pdf(img_descriptors) for g_k in normals)))
         """ u(x) for equation 15, page 4 in reference 1 """
         statistics_0_order, statistics_1_order, statistics_2_order = zeros(weights), zeros(weights), zeros(weights)
-        for k in range(0, len(weights)):
-            for index, sample in enumerate(img_descriptors):
-                posterior_probability = FisherVector.posterior_probability(gaussian_pdfs[index], weights)
-                statistics_0_order[k] = statistics_0_order[k] + likelihood_moment(sample, posterior_probability[k], 0)
-                statistics_1_order[k] = statistics_1_order[k] + likelihood_moment(sample, posterior_probability[k], 1)
-                statistics_2_order[k] = statistics_2_order[k] + likelihood_moment(sample, posterior_probability[k], 2)
 
+        for k in range(len(weights)):
+            posterior_probability = [FisherVector.posterior_probability(gaussian_pdfs[i], weights) for i in range(len(img_descriptors))]
+            statistics_0_order[k] = sum([likelihood_moment(sample, posterior_probability[index][k], 0) for index,sample in enumerate(img_descriptors)])
+            statistics_1_order[k] = sum([likelihood_moment(sample, posterior_probability[index][k], 1) for index,sample in enumerate(img_descriptors)])
+            statistics_2_order[k] = sum([likelihood_moment(sample, posterior_probability[index][k], 2) for index,sample in enumerate(img_descriptors)])
         return np.array(statistics_0_order), np.array(statistics_1_order), np.array(statistics_2_order)
 
     @staticmethod
