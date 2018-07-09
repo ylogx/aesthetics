@@ -162,7 +162,7 @@ class FisherVector(object):
             temp[k] = temp[k].sum(0)
         return np.array([temp[0][0],temp[1][0]]), np.array([temp[0][1],temp[1][1]]), np.array([temp[0][2],temp[1][2]])
 
-@   staticmethod
+    @staticmethod
     def posterior_probability(u_gaussian, weights):
         """ Implementation of equation 15, page 4 from reference [1] """
         probabilities = np.multiply(u_gaussian, weights)
