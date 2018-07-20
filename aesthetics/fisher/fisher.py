@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 import glob
-
 import numpy as np
 import os
 import tqdm
+
 from collections import OrderedDict
 from concurrent.futures import ProcessPoolExecutor
 from scipy.stats import multivariate_normal
 
+descriptors = None
 
 class FisherVector(object):
     """
@@ -104,8 +105,10 @@ class FisherVector(object):
         :return: fisher vector of given img array
         :rtype: np.array
         """
+        global descriptors
         from aesthetics.fisher import Descriptors
-        descriptors = Descriptors()
+        if descriptors is None:
+            descriptors = Descriptors()
         img_descriptors = descriptors.image(img)
         if img_descriptors is not None:
             return self._fisher_vector(img_descriptors)
@@ -144,20 +147,25 @@ class FisherVector(object):
         def zeros(like):
             return np.zeros(like.shape).tolist()
 
+        def likelihood_moment_util(sample, posterior_probability):
+            return [likelihood_moment(sample, posterior_probability, 0), likelihood_moment(sample, posterior_probability, 1), likelihood_moment(sample, posterior_probability, 2)]
+
         means, covariances, weights = self.gmm.means, self.gmm.covariances, self.gmm.weights
         normals = [multivariate_normal(mean=means[k], cov=covariances[k]) for k in range(0, len(weights))]
         """ Gaussian Normals """
-        gaussian_pdfs = [np.array([g_k.pdf(sample) for g_k in normals]) for sample in img_descriptors]
+        gaussian_pdfs = np.transpose(np.array(list(g_k.pdf(img_descriptors) for g_k in normals)))
         """ u(x) for equation 15, page 4 in reference 1 """
-        statistics_0_order, statistics_1_order, statistics_2_order = zeros(weights), zeros(weights), zeros(weights)
-        for k in range(0, len(weights)):
-            for index, sample in enumerate(img_descriptors):
-                posterior_probability = FisherVector.posterior_probability(gaussian_pdfs[index], weights)
-                statistics_0_order[k] = statistics_0_order[k] + likelihood_moment(sample, posterior_probability[k], 0)
-                statistics_1_order[k] = statistics_1_order[k] + likelihood_moment(sample, posterior_probability[k], 1)
-                statistics_2_order[k] = statistics_2_order[k] + likelihood_moment(sample, posterior_probability[k], 2)
-
-        return np.array(statistics_0_order), np.array(statistics_1_order), np.array(statistics_2_order)
+        len_of_weights = len(weights)
+        statistics_kth_order = [None]*len_of_weights
+        for k in range(len_of_weights):
+            posterior_probability = [FisherVector.posterior_probability(gaussian_pdfs[i], weights) for i in range(len(img_descriptors))]
+            statistics_kth_order[k] = [likelihood_moment_util(sample, posterior_probability[index][k]) for index,sample in enumerate(img_descriptors)]
+            statistics_kth_order[k] = np.array(statistics_kth_order[k])
+            statistics_kth_order[k] = statistics_kth_order[k].sum(0)
+        statistics_0_order = np.array([statistics_kth_order[0][0], statistics_kth_order[1][0]])
+        statistics_1_order = np.array([statistics_kth_order[0][1], statistics_kth_order[1][1]])
+        statistics_2_order = np.array([statistics_kth_order[0][2], statistics_kth_order[1][2]])
+        return statistics_0_order, statistics_1_order, statistics_2_order
 
     @staticmethod
     def posterior_probability(u_gaussian, weights):
