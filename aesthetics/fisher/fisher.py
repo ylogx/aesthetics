@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 import glob
-
 import numpy as np
 import os
 import tqdm
+
 from collections import OrderedDict
 from concurrent.futures import ProcessPoolExecutor
 from scipy.stats import multivariate_normal
 
+descriptors = None
 
 class FisherVector(object):
     """
@@ -104,8 +105,10 @@ class FisherVector(object):
         :return: fisher vector of given img array
         :rtype: np.array
         """
+        global descriptors
         from aesthetics.fisher import Descriptors
-        descriptors = Descriptors()
+        if descriptors is None:
+            descriptors = Descriptors()
         img_descriptors = descriptors.image(img)
         if img_descriptors is not None:
             return self._fisher_vector(img_descriptors)
