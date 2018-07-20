@@ -150,7 +150,7 @@ class FisherVector(object):
         means, covariances, weights = self.gmm.means, self.gmm.covariances, self.gmm.weights
         normals = [multivariate_normal(mean=means[k], cov=covariances[k]) for k in range(0, len(weights))]
         """ Gaussian Normals """
-        gaussian_pdfs = [np.array([g_k.pdf(sample) for g_k in normals]) for sample in img_descriptors]
+        gaussian_pdfs = np.transpose(np.array(list(g_k.pdf(img_descriptors) for g_k in normals)))
         """ u(x) for equation 15, page 4 in reference 1 """
         statistics_0_order, statistics_1_order, statistics_2_order = zeros(weights), zeros(weights), zeros(weights)
         for k in range(0, len(weights)):
